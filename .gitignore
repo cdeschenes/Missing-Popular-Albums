@@ -1,5 +1,6 @@
 # Ignore local environment files
 .env
+.DS_Store
+.cache/*
 missing_popular_albums.log
-.cache/lastfm_top_albums.json
 missing_popular_albums.html

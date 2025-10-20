@@ -680,11 +680,15 @@ def build_card_html(suggestion: AlbumSuggestion) -> str:
     bandcamp_url = f"https://bandcamp.com/search?q={query_encoded}"
     yt_url = f"https://music.youtube.com/search?q={query_encoded}"
     lastfm_url = suggestion.lastfm_url or discogs_url
+    copy_payload = html.escape(f"{suggestion.artist_display} {suggestion.album_title}")
+    aria_copy = html.escape(
+        f"Copy {suggestion.artist_display} {suggestion.album_title} to clipboard"
+    )
     if suggestion.image_url:
         cover_html = (
             f'<div class="cover">'
             f'<img src="{html.escape(suggestion.image_url)}" '
-            f'alt="{artist_escaped} - {album_escaped} cover art" loading="lazy"></div>'
+            f'alt="{album_escaped} cover art for {artist_escaped}" loading="lazy"></div>'
         )
     else:
         cover_html = '<div class="cover placeholder">No Artwork</div>'
@@ -692,7 +696,14 @@ def build_card_html(suggestion: AlbumSuggestion) -> str:
         "<article class=\"card\">"
         f"{cover_html}"
         "<div class=\"info\">"
-        f"<h2>{album_escaped}<span>{artist_escaped}</span></h2>"
+        "<div class=\"title-block\">"
+        f"<div class=\"title-text\"><h2>{album_escaped}</h2><span>{artist_escaped}</span></div>"
+        f"<button class=\"copy-btn\" type=\"button\" data-copy=\"{copy_payload}\" aria-label=\"{aria_copy}\">"
+        "<svg viewBox=\"0 0 24 24\" role=\"img\" aria-hidden=\"true\">"
+        "<path d=\"M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z\" fill=\"currentColor\"/>"
+        "</svg>"
+        "</button>"
+        "</div>"
         "<div class=\"links\">"
         f"<a href=\"{html.escape(lastfm_url)}\" target=\"_blank\" rel=\"noopener noreferrer\">Last.fm</a>"
         f"<a href=\"{discogs_url}\" target=\"_blank\" rel=\"noopener noreferrer\">Discogs</a>"
@@ -790,20 +801,61 @@ def render_html(
       padding: 1rem 1.2rem 1.4rem;
       display: flex;
       flex-direction: column;
-      gap: 0.85rem;
+      gap: 0.9rem;
     }}
-    .info h2 {{
+    .title-block {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }}
+    .title-text {{
+      flex: 1;
+      min-width: 0;
+    }}
+    .title-text h2 {{
       margin: 0;
       font-size: 1.1rem;
-      line-height: 1.4;
+      line-height: 1.35;
       font-weight: 600;
+      word-break: break-word;
     }}
-    .info h2 span {{
+    .title-text span {{
       display: block;
       color: #7dd6ff;
       font-size: 0.85rem;
       font-weight: 600;
       margin-top: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }}
+    .copy-btn {{
+      background: rgba(125, 214, 255, 0.18);
+      border: 1px solid rgba(125, 214, 255, 0.35);
+      border-radius: 12px;
+      color: #7dd6ff;
+      padding: 0.35rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+      flex-shrink: 0;
+    }}
+    .copy-btn:hover,
+    .copy-btn.copied {{
+      background: rgba(84, 184, 227, 0.45);
+      border-color: #7dd6ff;
+      color: #0b0b0b;
+    }}
+    .copy-btn:focus-visible {{
+      outline: 2px solid #7dd6ff;
+      outline-offset: 2px;
+    }}
+    .copy-btn svg {{
+      width: 18px;
+      height: 18px;
     }}
     .links {{
       display: grid;
@@ -836,6 +888,62 @@ def render_html(
   <section class="grid">
     {cards_html}
   </section>
+  <script>
+    function markCopied(button) {{
+      if (!button) {{
+        return;
+      }}
+      button.classList.add('copied');
+      setTimeout(function () {{
+        button.classList.remove('copied');
+      }}, 1200);
+    }}
+
+    function fallbackCopy(text, button) {{
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      textarea.style.pointerEvents = 'none';
+      textarea.style.top = '-1000px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {{
+        if (document.execCommand('copy')) {{
+          markCopied(button);
+        }}
+      }} catch (error) {{
+        console.warn('Clipboard copy failed', error);
+      }} finally {{
+        document.body.removeChild(textarea);
+      }}
+    }}
+
+    document.addEventListener('click', function (event) {{
+      const button = event.target.closest('.copy-btn');
+      if (!button) {{
+        return;
+      }}
+      const text = button.getAttribute('data-copy');
+      if (!text) {{
+        return;
+      }}
+      if (navigator.clipboard && navigator.clipboard.writeText) {{
+        navigator.clipboard.writeText(text).then(
+          function () {{
+            markCopied(button);
+          }},
+          function () {{
+            fallbackCopy(text, button);
+          }}
+        );
+      }} else {{
+        fallbackCopy(text, button);
+      }}
+    }});
+  </script>
 </body>
 </html>
 """
