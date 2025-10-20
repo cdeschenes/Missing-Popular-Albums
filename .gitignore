@@ -1,5 +1,7 @@
 # Ignore local environment files
 .env
+.env.*
+!.env.example
 .DS_Store
 .cache/*
 missing_popular_albums.log
