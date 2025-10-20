@@ -1,6 +1,6 @@
 # Missing Popular Albums
 
-Locate the single most popular album or EP missing from your music library for every artist you already own. The script scans your collection, calls the Last.fm API for playcount-ranked releases, and renders a dark-themed HTML report with high-res artwork, quick links, and copy-to-clipboard shortcuts.
+Locate the single most popular album or EP missing from your music library for every artist you already own. The script scans your collection, calls the Last.fm API for playcount-ranked releases, and renders a HTML report with high-res artwork, quick links, and copy-to-clipboard shortcuts.
 
 ## Install Dependencies
 
