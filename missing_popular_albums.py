@@ -46,6 +46,7 @@ DEFAULT_CONFIG = {
     "REQUEST_DELAY_MIN": "0.15",
     "REQUEST_DELAY_MAX": "0.3",
     "MAX_RETRIES": "3",
+    "LASTFM_API_KEY": "",
 }
 
 
@@ -546,24 +547,39 @@ def cache_albums(
     }
 
 
+def upgrade_image_url(url: str) -> str:
+    replacements = [
+        ("/34s/", "/600x600/"),
+        ("/64s/", "/600x600/"),
+        ("/128s/", "/600x600/"),
+        ("/174s/", "/600x600/"),
+        ("/300x300/", "/600x600/"),
+        ("/400x400/", "/600x600/"),
+    ]
+    for source, target in replacements:
+        if source in url:
+            return url.replace(source, target)
+    return url
+
+
 def extract_image(images: Optional[Sequence[Dict]]) -> Optional[str]:
     if not images:
         return None
     candidates = [img for img in images if isinstance(img, dict)]
-    preferred_order = ("large", "extralarge", "mega", "medium", "small")
+    preferred_order = ("mega", "extralarge", "large", "medium", "small")
     for size in preferred_order:
         for image in candidates:
             if image.get("size") == size and image.get("#text"):
                 url = image["#text"]
-                if size == "large" and "/34s/" in url:
-                    return url.replace("/34s/", "/300x300/")
-                return url or None
+                if not url:
+                    continue
+                if size in {"mega", "extralarge", "large"}:
+                    return upgrade_image_url(url)
+                return url
     for image in candidates:
         url = image.get("#text")
         if url:
-            if "/34s/" in url:
-                return url.replace("/34s/", "/300x300/")
-            return url
+            return upgrade_image_url(url)
     return None
 
 
@@ -790,18 +806,22 @@ def render_html(
       margin-top: 0.25rem;
     }}
     .links {{
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 0.5rem;
     }}
     .links a {{
       color: #0b0b0b;
       background: #7dd6ff;
-      border-radius: 999px;
-      padding: 0.38rem 0.95rem;
+      border-radius: 12px;
+      padding: 0.5rem 0.75rem;
       font-weight: 600;
       text-decoration: none;
       transition: background 0.2s ease-in-out;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }}
     .links a:hover {{
       background: #54b8e3;
@@ -973,7 +993,7 @@ def main() -> None:
     setup_logging()
     logging.info("Missing Popular Albums script started.")
 
-    api_key = os.environ.get("LASTFM_API_KEY")
+    api_key = os.environ.get("LASTFM_API_KEY") or CONFIG.get("LASTFM_API_KEY", "")
     if not api_key:
         print(
             "Last.fm API key missing. Set LASTFM_API_KEY environment variable, e.g.:\n"

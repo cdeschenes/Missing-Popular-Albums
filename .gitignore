@@ -1,3 +1,5 @@
 # Ignore local environment files
 .env
 missing_popular_albums.log
+.cache/lastfm_top_albums.json
+missing_popular_albums.html
