@@ -1,0 +1,3 @@
+# Ignore local environment files
+.env
+missing_popular_albums.log
